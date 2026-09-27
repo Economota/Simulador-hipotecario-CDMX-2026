@@ -3,8 +3,8 @@
 Modelo Dinámico de Costo de Oportunidad Inmobiliario — Rentar vs. Comprar
 Calibrado para Ciudad de México, 2026.
 
-Autor: Generado con Claude (Anthropic) como asistente de desarrollo.
-Stack: Streamlit + Plotly + Pandas + NumPy (100% Python, un solo archivo).
+Autor: Isaac Ortega Mota
+Stack: Streamlit + Plotly + Pandas + NumPy (100% Python)
 
 Cómo ejecutar:
     1. pip install -r requirements.txt
@@ -33,6 +33,16 @@ CUSTOM_CSS = """
 
     html, body, [class*="css"]  {
         font-family: 'Inter', sans-serif;
+    }
+
+    /* Fuerza un tema claro consistente, sin importar el modo oscuro del
+       dispositivo/navegador del visitante. Evita texto oscuro sobre fondo
+       oscuro cuando el sistema operativo o el navegador están en "night mode". */
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+        background-color: #FFFFFF !important;
+    }
+    .stApp, .stApp p, .stApp span, .stApp div, .stApp label {
+        color: var(--slate);
     }
 
     /* Paleta */
@@ -97,12 +107,41 @@ CUSTOM_CSS = """
         margin-top: 1.4rem;
     }
 
-    .veredicto-box {
-        border-radius: 14px;
-        padding: 1.3rem 1.6rem;
-        margin: 1rem 0 1.6rem 0;
-        border: 1px solid var(--border);
-        background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+    /* --- Sección de veredicto de alto impacto (hero) --- */
+    .veredicto-hero {
+        background: #0B0F19;
+        border-radius: 20px;
+        padding: 2.6rem 2rem 2.2rem 2rem;
+        margin: 1.1rem 0 2rem 0;
+        text-align: center;
+    }
+    .veredicto-label {
+        color: #94A3B8;
+        font-size: 0.95rem;
+        letter-spacing: 0.04em;
+        font-weight: 600;
+    }
+    .veredicto-ganador {
+        font-size: clamp(2.8rem, 10vw, 4.6rem);
+        font-weight: 800;
+        line-height: 1.02;
+        letter-spacing: -0.02em;
+        margin: 0.3rem 0 1rem 0;
+    }
+    .veredicto-monto {
+        color: #E2E8F0;
+        font-size: 1.15rem;
+        font-weight: 500;
+        max-width: 30rem;
+        margin: 0 auto;
+    }
+    .veredicto-monto b { color: #FFFFFF; }
+    .veredicto-sub {
+        color: #64748B;
+        font-size: 0.85rem;
+        margin-top: 1.3rem;
+        padding-top: 1rem;
+        border-top: 1px solid #1E293B;
     }
 
     .footnote {
@@ -359,24 +398,41 @@ tab_dashboard, tab_metodologia = st.tabs(["📊 Dashboard", "📚 Metodología y
 
 with tab_dashboard:
 
-    # --- Veredicto rápido ---
-    if anio_cruce is not None:
-        ganador_final = "Comprar" if diferencia_final > 0 else "Rentar e Invertir"
-        veredicto_texto = (
-            f"Con estos parámetros, las curvas de patrimonio neto se cruzan en el "
-            f"<b>año {anio_cruce:.1f}</b>. Al final del horizonte de {horizonte_anios} años, "
-            f"la estrategia <b>{ganador_final}</b> resulta superior por "
-            f"<b>{fmt_mxn(abs(diferencia_final))}</b>."
+    # --- Veredicto de alto impacto (hero) ---
+    gana_comprar = diferencia_final > 0
+    ganador_palabra = "COMPRAR" if gana_comprar else "RENTAR"
+    accent = "#2563EB" if gana_comprar else "#059669"
+    perdedor_palabra = "rentar e invertir" if gana_comprar else "comprar"
+
+    if anio_cruce is not None and anio_cruce <= horizonte_anios:
+        linea_secundaria = (
+            f"El punto de cruce ocurre en el año {anio_cruce:.1f}: antes de eso, "
+            f"convenía {perdedor_palabra}."
+        )
+    elif anio_cruce is not None:
+        linea_secundaria = (
+            f"{ganador_palabra.capitalize()} domina todo tu horizonte; el cruce con la otra "
+            f"opción ocurriría hasta el año {anio_cruce:.1f}, fuera de tu plan."
         )
     else:
-        ganador_final = "Comprar" if diferencia_final > 0 else "Rentar e Invertir"
-        veredicto_texto = (
-            f"Con estos parámetros, no existe cruce dentro del horizonte de "
-            f"{horizonte_anios} años: la estrategia <b>{ganador_final}</b> domina desde "
-            f"el inicio, con una diferencia final de <b>{fmt_mxn(abs(diferencia_final))}</b>."
+        linea_secundaria = (
+            f"Con estos supuestos, {perdedor_palabra} no alcanza a {ganador_palabra.lower()} "
+            f"dentro de los {horizonte_anios} años que planeas."
         )
 
-    st.markdown(f'<div class="veredicto-box">{veredicto_texto}</div>', unsafe_allow_html=True)
+    st.markdown(f"""
+        <div class="veredicto-hero">
+            <div class="veredicto-label">Si te quedas {horizonte_anios} años, te conviene:</div>
+            <div class="veredicto-ganador" style="color:{accent};">{ganador_palabra}</div>
+            <div class="veredicto-monto">
+                Te deja <b>{fmt_mxn(abs(diferencia_final))}</b> más de patrimonio que la otra opción.
+            </div>
+            <div class="veredicto-sub">
+                {linea_secundaria} Tu hipoteca sale en {fmt_mxn(df.attrs['pago_mensual'])}
+                al mes (a {horizonte_anios} años).
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
     # --- KPIs ---
     c1, c2, c3, c4 = st.columns(4)
